@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fuel Map Admin Dashboard</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 16px; color: #0f172a; }
+    .container { max-width: 1100px; margin: 0 auto; }
+    h1 { margin-bottom: 20px; font-size: 24px; font-weight: 800; }
+    .card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.03); }
+    .card-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; color: #1e293b; }
+    
+    .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
+    .form-grid > div:first-child { grid-column: span 2; }
+    label { display: block; font-size: 11px; font-weight: 600; color: #64748b; margin-bottom: 4px; }
+    input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 14px; background-color: #f8fafc; }
+    
+    button { cursor: pointer; font-weight: 600; border-radius: 8px; border: none; font-size: 14px; width: 100%; padding: 12px; box-sizing: border-box; transition: background 0.2s; }
+    .btn-primary { background-color: #2563eb; color: white; }
+    .btn-primary:hover { background-color: #1d4ed8; }
+    .btn-danger { background-color: #ef4444; color: white; padding: 8px 12px; }
+    .btn-danger:hover { background-color: #dc2626; }
+    
+    /* Dual Action Button Colors */
+    .btn-update { background-color: #0284c7; color: white; font-size: 15px; }
+    .btn-update:hover { background-color: #0369a1; }
+    .btn-json { background-color: #10b981; color: white; font-size: 15px; }
+    .btn-json:hover { background-color: #059669; }
+    
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14px; }
+    th { background-color: #f1f5f9; text-align: left; padding: 12px; font-weight: 600; color: #475569; }
+    td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
+    
+    .editable-cell { border: 1px dashed #cbd5e1; padding: 6px; border-radius: 4px; background: #fff; text-align: left; }
+    .editable-cell:focus { border: 1px solid #2563eb; outline: none; }
+    .actions-group { display: flex; flex-direction: column; gap: 12px; width: 100%; margin-top: 20px; }
+    #statusMessage { font-size: 13px; font-weight: 600; text-align: center; height: 18px; }
+
+    @media (max-width: 768px) {
+      table, thead, tbody, th, td, tr { display: block; }
+      thead tr { position: absolute; top: -9999px; left: -9999px; }
+      tr { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 16px; padding: 8px; }
+      td { border: none; border-bottom: 1px solid #f1f5f9; position: relative; padding-left: 45%; text-align: right; min-height: 38px; display: flex; align-items: center; justify-content: flex-end; }
+      td:last-child { border-bottom: none; padding-left: 12px; justify-content: center; margin-top: 8px; }
+      td::before { content: attr(data-label); position: absolute; left: 12px; width: 40%; text-align: left; font-weight: 700; color: #64748b; font-size: 12px; text-transform: uppercase; }
+      .editable-cell { width: 50%; box-sizing: border-box; }
+    }
+    @media (min-width: 769px) {
+      .form-grid { grid-template-columns: repeat(7, 1fr); }
+      .form-grid > div:first-child { grid-column: span 2; }
+      button { width: auto; }
+      .actions-group { flex-direction: row; justify-content: flex-end; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>Fuel Map Management Panel</h1>
+
+    <div class="card" style="background-color: #f1f5f9; border: 2px dashed #cbd5e1;">
+      <div class="card-title">1. Load Existing Data File (Optional)</div>
+      <input type="file" id="importFile" accept=".json">
+    </div>
+
+    <div class="card">
+      <div class="card-title">2. Add New Station Node</div>
+      <form id="stationForm">
+        <div class="form-grid">
+          <div><label>Station Name</label><input type="text" id="name" placeholder="Petron Caloocan" required></div>
+          <div><label>Latitude</label><input type="number" id="lat" step="any" placeholder="14.6560" required></div>
+          <div><label>Longitude</label><input type="number" id="lng" step="any" placeholder="120.9820" required></div>
+          <div><label>Unleaded (₱)</label><input type="number" id="unleaded" step="0.01" required></div>
+          <div><label>Premium (₱)</label><input type="number" id="premium" step="0.01" required></div>
+          <div><label>XCS (₱)</label><input type="number" id="xcs" step="0.01" value="0"></div>
+          <div><label>Diesel (₱)</label><input type="number" id="diesel" step="0.01" required></div>
+        </div>
+        <button type="submit" class="btn-primary">Add to Registry Table</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="card-title">3. Current Active Workspace</div>
+      <table id="dataTable">
+        <thead>
+          <tr>
+            <th>Station Name</th><th>Latitude</th><th>Longitude</th><th>Unleaded</th><th>Premium</th><th>XCS</th><th>Diesel</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+
+      <div class="actions-group">
+        <button id="updateMapBtn" class="btn-update">🔄 Update Map (Local Test)</button>
+        <button id="exportJsonBtn" class="btn-json">⬇️ Generate stations.json</button>
+      </div>
+      <div id="statusMessage" style="margin-top: 12px;"></div>
+    </div>
+  </div>
+
+  <script>
+    // Initialize workspace data array from browser memory storage so local edits persist safely
+    let stations = JSON.parse(localStorage.getItem('gasStationsWorkspace')) || [];
+
+    const tableBody = document.getElementById('tableBody');
+    const stationForm = document.getElementById('stationForm');
+    const updateMapBtn = document.getElementById('updateMapBtn');
+    const exportJsonBtn = document.getElementById('exportJsonBtn');
+    const importFile = document.getElementById('importFile');
+    const statusMessage = document.getElementById('statusMessage');
+
+    function getTimestamp() {
+      const now = new Date();
+      return `${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    }
+
+    function showStatus(text, color) {
+      statusMessage.innerText = text;
+      statusMessage.style.color = color;
+      setTimeout(() => statusMessage.innerText = "", 4000);
+    }
+
+    function renderTable() {
+      tableBody.innerHTML = '';
+      if(stations.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#94a3b8; padding:20px;">Workspace is empty. Add a station above or load your stations.json file.</td></tr>';
+        return;
+      }
+
+      stations.forEach((station, index) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td data-label="Station Name" contenteditable="true" class="editable-cell" data-field="stationName" data-index="${index}">${station.stationName}</td>
+          <td data-label="Latitude" contenteditable="true" class="editable-cell" data-field="lat" data-index="${index}">${station.lat}</td>
+          <td data-label="Longitude" contenteditable="true" class="editable-cell" data-field="lng" data-index="${index}">${station.lng}</td>
+          <td data-label="Unleaded" contenteditable="true" class="editable-cell" data-field="unleaded" data-index="${index}">${Number(station.prices.unleaded).toFixed(2)}</td>
+          <td data-label="Premium" contenteditable="true" class="editable-cell" data-field="premium" data-index="${index}">${Number(station.prices.premium).toFixed(2)}</td>
+          <td data-label="XCS" contenteditable="true" class="editable-cell" data-field="xcs" data-index="${index}">${Number(station.prices.xcs).toFixed(2)}</td>
+          <td data-label="Diesel" contenteditable="true" class="editable-cell" data-field="diesel" data-index="${index}">${Number(station.prices.diesel).toFixed(2)}</td>
+          <td data-label="Action"><button class="btn-danger" onclick="deleteStation(${index})">Delete</button></td>
+        `;
+        tableBody.appendChild(tr);
+      });
+    }
+
+    importFile.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          stations = JSON.parse(evt.target.result);
+          localStorage.setItem('gasStationsWorkspace', JSON.stringify(stations));
+          renderTable();
+          showStatus("✅ File loaded into workspace successfully!", "#10b981");
+        } catch (err) {
+          alert("Error parsing file format.");
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    tableBody.addEventListener('blur', (e) => {
+      if (e.target.classList.contains('editable-cell')) {
+        const index = parseInt(e.target.getAttribute('data-index'));
+        const field = e.target.getAttribute('data-field');
+        const value = e.target.innerText.trim();
+
+        if (field === 'stationName') {
+          stations[index].stationName = value;
+        } else if (field === 'lat' || field === 'lng') {
+          stations[index][field] = parseFloat(value) || 0;
+        } else {
+          stations[index].prices[field] = parseFloat(value) || 0;
+        }
+        stations[index].updatedAt = getTimestamp();
+        localStorage.setItem('gasStationsWorkspace', JSON.stringify(stations));
+      }
+    }, true);
+
+    stationForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const newStation = {
+        id: Date.now(),
+        stationName: document.getElementById('name').value,
+        lat: parseFloat(document.getElementById('lat').value),
+        lng: parseFloat(document.getElementById('lng').value),
+        prices: {
+          unleaded: parseFloat(document.getElementById('unleaded').value) || 0,
+          premium: parseFloat(document.getElementById('premium').value) || 0,
+          xcs: parseFloat(document.getElementById('xcs').value) || 0,
+          diesel: parseFloat(document.getElementById('diesel').value) || 0
+        },
+        updatedAt: getTimestamp()
+      };
+      stations.push(newStation);
+      localStorage.setItem('gasStationsWorkspace', JSON.stringify(stations));
+      renderTable();
+      stationForm.reset();
+      document.getElementById('xcs').value = "0";
+    });
+
+    window.deleteStation = function(index) {
+      if(confirm("Remove this entry?")) {
+        stations.splice(index, 1);
+        localStorage.setItem('gasStationsWorkspace', JSON.stringify(stations));
+        renderTable();
+      }
+    };
+
+    // BUTTON 1: UPDATE LOCAL STORAGE FOR INSTANT MAP TESTING
+    updateMapBtn.addEventListener('click', () => {
+      localStorage.setItem('gasStationsLive', JSON.stringify(stations));
+      showStatus("🔄 Local map updated! Refresh your index.html tab to check changes.", "#0284c7");
+    });
+
+    // BUTTON 2: GENERATE AND EXPORT STATIC PRODUCTION FILE
+    exportJsonBtn.addEventListener('click', () => {
+      if(stations.length === 0) {
+        alert("Add data entries to the table before compiling an export file.");
+        return;
+      }
+      const jsonString = JSON.stringify(stations, null, 2);
+      const blob = new Blob([jsonString], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.href = url;
+      downloadAnchor.download = "stations.json";
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      document.body.removeChild(downloadAnchor);
+      URL.revokeObjectURL(url);
+      
+      showStatus("⬇️ stations.json compiled and downloaded!", "#10b981");
+    });
+
+    renderTable();
+  </script>
+</body>
+</html>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live Fuel Price Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+    #map { width: 100%; height: 100%; }
+
+    /* BADGE PRESENTATION STYLES */
+    .fuel-card-marker { background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(2px); border: 2px solid #1e293b; border-radius: 8px; width: 150px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); position: absolute; transform: translate(-50%, calc(-100% - 8px)); display: flex; flex-direction: column; overflow: visible; }
+    .fuel-card-marker.is-cheapest { border: 2px solid #10b981; box-shadow: 0 0 15px rgba(16, 185, 129, 0.5); z-index: 9999 !important; }
+    .fuel-card-header { background-color: rgba(30, 41, 59, 0.94); color: #ffffff; padding: 4px 8px; font-size: 11px; font-weight: 700; text-transform: uppercase; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; border-top-left-radius: 6px; border-top-right-radius: 6px; }
+    .is-cheapest .fuel-card-header { background-color: rgba(16, 185, 129, 0.95); }
+    .fuel-grid { display: flex; flex-direction: column; }
+    .fuel-row { display: flex; justify-content: space-between; align-items: center; padding: 3px 8px; border-bottom: 1px solid rgba(226, 232, 240, 0.6); font-size: 12px; }
+    .fuel-type { font-weight: 600; color: #475569; }
+    .fuel-price { font-weight: 700; color: #0f172a; }
+    .lowest-price-highlight { color: #10b981 !important; background-color: rgba(209, 250, 229, 0.7); padding: 0px 4px; border-radius: 4px; }
+    .fuel-card-footer { background-color: rgba(248, 250, 252, 0.6); color: #64748b; font-size: 9px; padding: 2px 8px; text-align: right; border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; }
+    
+    .fuel-card-marker::after { content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); border-width: 6px 6px 0; border-style: solid; border-color: rgba(30, 41, 59, 0.9) transparent; display: block; width: 0; }
+    .is-cheapest::after { border-color: rgba(16, 185, 129, 0.9) transparent; }
+    .fuel-card-marker::before { content: ''; position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%); width: 8px; height: 8px; background-color: #1e293b; border: 2px solid #ffffff; border-radius: 50%; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4); display: block; z-index: 10; }
+    .is-cheapest::before { background-color: #10b981; }
+
+    /* ANNOUNCEMENT TOAST SLIDE OUT BANNER */
+    .announcement-banner { position: fixed; bottom: -400px; right: 20px; width: 320px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15); padding: 16px; z-index: 10000; transition: bottom 0.5s cubic-bezier(0.16, 1, 0.3, 1); box-sizing: border-box; }
+    .announcement-banner.show { bottom: 20px; }
+    .banner-title { font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 8px; }
+    .banner-body { font-size: 12px; color: #475569; line-height: 1.5; }
+    .banner-close-btn { position: absolute; top: 10px; right: 12px; background: none; border: none; font-size: 20px; cursor: pointer; color: #94a3b8; padding: 0; }
+    .donation-box { display: flex; gap: 12px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 8px; margin-top: 10px; align-items: center; }
+    @media (max-width: 480px) { .announcement-banner { right: 10px; left: 10px; width: auto; } .announcement-banner.show { bottom: 10px; } }
+  </style>
+</head>
+<body>
+
+  <div id="map"></div>
+
+  <div id="announcementBanner" class="announcement-banner">
+    <button class="banner-close-btn" onclick="closeBanner()">&times;</button>
+    <div class="banner-title">📢 Info & Collaboration</div>
+    <div class="banner-body">
+      <p>Maintained by <strong>Rai Gelverio</strong>.</p>
+      <div class="donation-box">
+        <div style="font-size: 24px;">📱</div>
+        <div>
+          <strong>Contact Support:</strong><br>
+          <a href="mailto:rai.gelverio.dev@gmail.com" style="color:#2563eb; text-decoration:none;">rai.gelverio.dev@gmail.com</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const map = L.map('map').setView([14.6550, 120.9850], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+
+    const banner = document.getElementById('announcementBanner');
+    function showBanner() { banner.classList.add('show'); }
+    function closeBanner() { banner.classList.remove('show'); }
+    setTimeout(showBanner, 2000);
+
+    // HYBRID LOADER: Checks Local Storage first for live tests, then falls back to the JSON file
+    async function loadMapMarkers() {
+      let gasStations = null;
+
+      // Check if there is active temporary test data saved in local storage
+      const localLiveData = localStorage.getItem('gasStationsLive');
+      
+      if (localLiveData) {
+        console.log("[DATA ENGINE]: Found live local test data. Using it for layout mapping.");
+        gasStations = JSON.parse(localLiveData);
+      } else {
+        console.log("[DATA ENGINE]: No local test data found. Fetching stations.json from server storage.");
+        try {
+          const cacheBuster = Date.now();
+          const response = await fetch(`stations.json?v=${cacheBuster}`);
+          if (response.ok) {
+            gasStations = await response.json();
+          }
+        } catch (err) {
+          console.error("Failed to read server data file:", err);
+        }
+      }
+
+      // If both sources turn up completely blank, exit quietly
+      if (!gasStations || gasStations.length === 0) {
+        console.warn("No active data entries found to parse onto map nodes.");
+        return;
+      }
+
+      // Standard minimum price bounding checks
+      const validUnleadedPrices = gasStations.map(s => parseFloat(s.prices.unleaded)).filter(p => p > 0);
+      const minUnleaded = validUnleadedPrices.length ? Math.min(...validUnleadedPrices) : 0;
+
+      const validDieselPrices = gasStations.map(s => parseFloat(s.prices.diesel)).filter(p => p > 0);
+      const minDiesel = validDieselPrices.length ? Math.min(...validDieselPrices) : 0;
+
+      // Inject markers loop
+      gasStations.forEach(station => {
+        const unlPrice = parseFloat(station.prices.unleaded) || 0;
+        const premPrice = parseFloat(station.prices.premium) || 0;
+        const xcsPrice = parseFloat(station.prices.xcs) || 0;
+        const dslPrice = parseFloat(station.prices.diesel) || 0;
+
+        const hasCheapestUnleaded = unlPrice === minUnleaded && minUnleaded > 0;
+        const hasCheapestDiesel = dslPrice === minDiesel && minDiesel > 0;
+        const isCheapestStation = hasCheapestUnleaded || hasCheapestDiesel;
+        
+        const cardClass = isCheapestStation ? "fuel-card-marker is-cheapest" : "fuel-card-marker";
+        const xcsRowHtml = xcsPrice > 0 
+          ? `<div class="fuel-row"><span class="fuel-type">XCS:</span><span class="fuel-price">₱${xcsPrice.toFixed(2)}</span></div>` 
+          : '';
+
+        const cardInnerHtml = `
+          <div class="${cardClass}">
+            <div class="fuel-card-header">${station.stationName} ${isCheapestStation ? '★' : ''}</div>
+            <div class="fuel-grid">
+              <div class="fuel-row">
+                <span class="fuel-type">UNL:</span>
+                <span class="fuel-price ${hasCheapestUnleaded ? 'lowest-price-highlight' : ''}">₱${unlPrice.toFixed(2)}</span>
+              </div>
+              <div class="fuel-row">
+                <span class="fuel-type">PREM:</span>
+                <span class="fuel-price">₱${premPrice.toFixed(2)}</span>
+              </div>
+              ${xcsRowHtml}
+              <div class="fuel-row">
+                <span class="fuel-type">DSL:</span>
+                <span class="fuel-price ${hasCheapestDiesel ? 'lowest-price-highlight' : ''}">₱${dslPrice.toFixed(2)}</span>
+              </div>
+            </div>
+            <div class="fuel-card-footer">Updated: ${station.updatedAt || 'Recent'}</div>
+          </div>
+        `;
+
+        const customIcon = L.divIcon({ className: 'clear-leaflet-defaults', html: cardInnerHtml, iconSize: [0, 0] });
+        L.marker([parseFloat(station.lat), parseFloat(station.lng)], { icon: customIcon }).addTo(map);
+      });
+    }
+
+    loadMapMarkers();
+  </script>
+</body>
+</html>
