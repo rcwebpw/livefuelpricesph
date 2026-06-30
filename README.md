@@ -10,3 +10,5 @@ The ones in the green box has the cheapest price, can you spot them? take time t
 Fuel Stations update their prices once a week every Tuesday (some update on Friday if there is incoming lower price)
 
 ![Latest Fuel Price Map](https://github.com/rcwebpw/livefuelpricesph/blob/main/livefuelprice_map.png)
+
+issue: this app saves data on browser localstorage (due to local development) but will be updated with json to save data/update data
