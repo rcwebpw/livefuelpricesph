@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live Fuel Price Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+    #map { width: 100%; height: 100%; }
+
+    /* BADGE UI ENGINE */
+    .fuel-card-marker {
+      background: rgba(255, 255, 255, 0.85); 
+      backdrop-filter: blur(2px);
+      border: 2px solid #1e293b;
+      border-radius: 8px;
+      width: 150px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      position: absolute;
+      transform: translate(-50%, calc(-100% - 8px)); 
+      display: flex;
+      flex-direction: column;
+      overflow: visible;
+    }
+    .fuel-card-marker.is-cheapest { border: 2px solid #10b981; box-shadow: 0 0 15px rgba(16, 185, 129, 0.5); z-index: 9999 !important; }
+    .fuel-card-header { background-color: rgba(30, 41, 59, 0.9); color: #ffffff; padding: 4px 8px; font-size: 11px; font-weight: 700; text-transform: uppercase; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; border-top-left-radius: 6px; border-top-right-radius: 6px; }
+    .is-cheapest .fuel-card-header { background-color: rgba(16, 185, 129, 0.9); }
+    .fuel-grid { display: flex; flex-direction: column; }
+    .fuel-row { display: flex; justify-content: space-between; align-items: center; padding: 3px 8px; border-bottom: 1px solid rgba(226, 232, 240, 0.6); font-size: 12px; }
+    .fuel-type { font-weight: 600; color: #475569; }
+    .fuel-price { font-weight: 700; color: #0f172a; }
+    .lowest-price-highlight { color: #10b981 !important; background-color: rgba(209, 250, 229, 0.7); padding: 0px 4px; border-radius: 4px; }
+    .fuel-card-footer { background-color: rgba(248, 250, 252, 0.6); color: #64748b; font-size: 9px; padding: 2px 8px; text-align: right; border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; }
+    
+    /* Anchors & Pointer Arrows */
+    .fuel-card-marker::after { content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); border-width: 6px 6px 0; border-style: solid; border-color: rgba(30, 41, 59, 0.9) transparent; display: block; width: 0; }
+    .is-cheapest::after { border-color: rgba(16, 185, 129, 0.9) transparent; }
+    .fuel-card-marker::before { content: ''; position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%); width: 8px; height: 8px; background-color: #1e293b; border: 2px solid #ffffff; border-radius: 50%; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4); display: block; z-index: 10; }
+    .is-cheapest::before { background-color: #10b981; }
+    /* ANNOUNCEMENT TOAST SLIDE OUT BANNER */
+    .announcement-banner {
+      position: fixed;
+      bottom: -400px; /* Hidden off-screen initially */
+      right: 20px;
+      width: 320px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(8px);
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.15);
+      padding: 16px;
+      z-index: 10000; /* Positions it over Leaflet controls */
+      transition: bottom 0.5s cubic-bezier(0.16, 1, 0.3, 1); /* Ultra smooth slide physics */
+      box-sizing: border-box;
+    }
+
+    /* Slide up state class */
+    .announcement-banner.show {
+      bottom: 20px;
+    }
+
+    .banner-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 8px;
+      padding-right: 20px;
+    }
+
+    .banner-body {
+      font-size: 12px;
+      color: #475569;
+      line-height: 1.5;
+    }
+
+    .banner-body p { margin: 0 0 8px 0; }
+
+    .banner-close-btn {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      color: #94a3b8;
+      line-height: 1;
+      padding: 0;
+    }
+    .banner-close-btn:hover { color: #64748b; }
+
+    /* Donation Card Layout UI */
+    .donation-box {
+      display: flex;
+      gap: 12px;
+      background: #f8fafc;
+      border: 1px dashed #cbd5e1;
+      border-radius: 8px;
+      padding: 8px;
+      margin-top: 10px;
+      align-items: center;
+    }
+
+    .qr-placeholder {
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .contact-details {
+      display: flex;
+      flex-direction: column;
+      font-size: 11px;
+    }
+
+    .email-link {
+      color: #2563eb;
+      text-decoration: none;
+      word-break: break-all;
+      margin-top: 2px;
+    }
+    .email-link:hover { text-decoration: underline; }
+
+    /* Responsive layout override for tiny mobile phone viewports */
+    @media (max-width: 480px) {
+      .announcement-banner {
+        right: 10px;
+        left: 10px;
+        width: auto;
+      }
+      .announcement-banner.show {
+        bottom: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // 1. READ DATABASES STRAIGHT FROM BROWSER STORAGE SYSTEM
+    const defaultData = [
+      { id: 1, stationName: "Petron Caloocan", lat: 14.6560, lng: 120.9820, prices: { unleaded: 70.40, premium: 71.40, xcs: 72.50, diesel: 65.10 }, updatedAt: "06/30 04:15 PM" },
+      { id: 2, stationName: "Shell Grace Park", lat: 14.6490, lng: 120.9910, prices: { unleaded: 68.20, premium: 72.10, xcs: 0, diesel: 64.90 }, updatedAt: "06/30 02:30 PM" }
+    ];
+    
+    const gasStations = JSON.parse(localStorage.getItem('gasStationsData')) || defaultData;
+
+    // Minimum calculation safety handling checks
+    const validUnleadedPrices = gasStations.map(s => s.prices.unleaded).filter(p => p > 0);
+    const minUnleaded = validUnleadedPrices.length ? Math.min(...validUnleadedPrices) : 0;
+
+    const validDieselPrices = gasStations.map(s => s.prices.diesel).filter(p => p > 0);
+    const minDiesel = validDieselPrices.length ? Math.min(...validDieselPrices) : 0;
+
+    // Map initialization setup 
+    const map = L.map('map').setView([14.6550, 120.9850], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+
+    // Marker processing layout generator loop
+    gasStations.forEach(station => {
+      const hasCheapestUnleaded = station.prices.unleaded === minUnleaded && minUnleaded > 0;
+      const hasCheapestDiesel = station.prices.diesel === minDiesel && minDiesel > 0;
+      const isCheapestStation = hasCheapestUnleaded || hasCheapestDiesel;
+      
+      const cardClass = isCheapestStation ? "fuel-card-marker is-cheapest" : "fuel-card-marker";
+      const xcsRowHtml = station.prices.xcs > 0 
+        ? `<div class="fuel-row"><span class="fuel-type">XCS:</span><span class="fuel-price">₱${station.prices.xcs.toFixed(2)}</span></div>` 
+        : '';
+
+      const cardInnerHtml = `
+        <div class="${cardClass}">
+          <div class="fuel-card-header">${station.stationName} ${isCheapestStation ? '★' : ''}</div>
+          <div class="fuel-grid">
+            <div class="fuel-row">
+              <span class="fuel-type">UNL:</span>
+              <span class="fuel-price ${hasCheapestUnleaded ? 'lowest-price-highlight' : ''}">₱${station.prices.unleaded.toFixed(2)}</span>
+            </div>
+            <div class="fuel-row">
+              <span class="fuel-type">PREM:</span>
+              <span class="fuel-price">₱${station.prices.premium.toFixed(2)}</span>
+            </div>
+            ${xcsRowHtml}
+            <div class="fuel-row">
+              <span class="fuel-type">DSL:</span>
+              <span class="fuel-price ${hasCheapestDiesel ? 'lowest-price-highlight' : ''}">₱${station.prices.diesel.toFixed(2)}</span>
+            </div>
+          </div>
+          <div class="fuel-card-footer">Updated: ${station.updatedAt}</div>
+        </div>
+      `;
+
+      const customIcon = L.divIcon({ className: 'clear-leaflet-defaults', html: cardInnerHtml, iconSize: [0, 0] });
+      L.marker([station.lat, station.lng], { icon: customIcon }).addTo(map);
+    });
+  </script>
+  <script>// ===================================================
+// INTELLIGENT NON-OBTRUSIVE BANNER POPUP ENGINE
+// ===================================================
+const banner = document.getElementById('announcementBanner');
+
+function showBanner() {
+  banner.classList.add('show');
+}
+
+function closeBanner() {
+  banner.classList.remove('show');
+}
+
+function runBannerLogic() {
+  // ===================================================
+// ENHANCED POPUP BANNER ENGINE WITH CONSOLE LOGGING
+// ===================================================
+const banner = document.getElementById('announcementBanner');
+
+// Stylized ASCII signature and app documentation for the Console
+console.log(
+  `%c⛽ FUEL PRICE LIVE MAP %c v1.0.0\n%cDeveloped by Rai Gelverio\n\nPurpose:\nA lightweight, responsive interactive tracking dashboard built with Leaflet.js and OpenStreetMap. Provides crowdsourced/manually updated fuel matrix arrays (Unleaded, Premium, Diesel, XCS) with real-time minimum calculation engines to instantly isolate the most economical neighborhood options.\n\nUsage:\n- Admin panel pushes updates seamlessly via browser localStorage engines.\n- Map UI dynamically tags the cheapest local options with special visual card modifiers.`,
+  "color: #10b981; font-size: 16px; font-weight: bold; font-family: sans-serif;",
+  "color: #64748b; font-size: 12px; font-family: sans-serif;",
+  "color: #475569; font-size: 13px; font-style: italic; font-family: sans-serif;"
+);
+
+function showBanner(reason) {
+  banner.classList.add('show');
+  console.log(`%c[BANNER TRIGGERED]: Displaying announcement overlay to user. Reason: ${reason}`, "color: #10b981; font-weight: bold;");
+}
+
+function closeBanner() {
+  banner.classList.remove('show');
+  console.log("[BANNER CLOSED]: User dismissed the notification frame.");
+}
+
+function runBannerLogic() {
+  // --- LOCAL TESTING OVERRIDE ---
+  if (window.location.protocol === 'file:') {
+    console.log("[BANNER LOG]: Local 'file:' environment detected. Bypassing operational cycle limits for development testing.");
+    setTimeout(() => showBanner("Local testing override loop"), 1500);
+    return;
+  }
+  // ------------------------------
+
+  const now = Date.now();
+  const oneDayMs = 24 * 60 * 60 * 1000;
+  
+  const lastShown = localStorage.getItem('bannerLastShownTimestamp');
+  let dailyImpressionCount = parseInt(localStorage.getItem('bannerDailyCount')) || 0;
+  let cycleAnchorDate = localStorage.getItem('bannerCycleAnchor');
+
+  // Case A: First load ever across this browser profile
+  if (!lastShown) {
+    console.log("[BANNER LOG]: Fresh browser profile signature detected.");
+    localStorage.setItem('bannerLastShownTimestamp', now);
+    localStorage.setItem('bannerCycleAnchor', now);
+    localStorage.setItem('bannerDailyCount', 1);
+    setTimeout(() => showBanner("First time application initialization load"), 3000);
+    return;
+  }
+
+  // Reset counters if 24 hours have passed since the anchor timestamp
+  if (!cycleAnchorDate || (now - cycleAnchorDate > oneDayMs)) {
+    console.log("[BANNER LOG]: 24-hour cycle window elapsed. Resetting impression count metrics.");
+    localStorage.setItem('bannerCycleAnchor', now);
+    dailyImpressionCount = 0;
+    localStorage.setItem('bannerDailyCount', 0);
+  }
+
+  // Case B: Persistent user browser interaction loop
+  if (dailyImpressionCount >= 2) {
+    console.log(`%c[BANNER SKIPPED]: Daily impression limit reached (${dailyImpressionCount}/2). Suppressing banner to maintain clear user experience.`, "color: #ef4444;");
+    return;
+  }
+
+  const hoursSinceLastShow = (now - lastShown) / (1000 * 60 * 60);
+  if (hoursSinceLastShow <= 3) {
+    console.log(`[BANNER SKIPPED]: Anti-annoyance cooldown active. Only ${hoursSinceLastShow.toFixed(2)} hours elapsed out of 3 required since the last display event.`);
+    return;
+  }
+
+  // Execute a weighted coin-flip check
+  const rollDice = Math.random(); 
+  console.log(`[BANNER LOG]: Session initialization entry verification check. Random dice roll value: ${rollDice.toFixed(4)} (Needs > 0.65 to fire)`);
+  
+  if (rollDice > 0.65) { 
+    localStorage.setItem('bannerLastShownTimestamp', now);
+    localStorage.setItem('bannerDailyCount', dailyImpressionCount + 1);
+    setTimeout(() => showBanner(`Passed random rolling parameters. Daily count is now: ${dailyImpressionCount + 1}/2`), 4000);
+  } else {
+    console.log("[BANNER SKIPPED]: Failed random session rolling parameters. Banner remains hidden.");
+  }
+}
+
+// Fire the check instantly when the script initializes
+runBannerLogic();
+}
+</script>
+  <div id="announcementBanner" class="announcement-banner">
+  <button class="banner-close-btn" onclick="closeBanner()">&times;</button>
+  <div class="banner-title">📢 Notice & Collaboration</div>
+  <div class="banner-body">
+    <p>This interactive tracking app is independently developed & maintained by <strong>Rai Gelverio</strong>.</p>
+    <p>If this tool helps you find the best rates, please consider supporting ongoing hosting and maintenance costs!</p>
+    
+    <div class="donation-box">
+      <div class="qr-placeholder">
+        <div style="font-size: 11px; font-weight: bold; color: #0046a0;">GCash QR Code</div>
+        <div style="width: 80px; height: 80px; background: #cbd5e1; margin: 4px auto; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 20px;">📱</div>
+      </div>
+      <div class="contact-details">
+        <span><strong>For Collaborations:</strong></span>
+        <a href="mailto:rai.gelverio.dev@gmail.com" class="email-link">rai.gelverio.dev@gmail.com</a>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
