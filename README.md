@@ -4,3 +4,7 @@ it is simply not possible to request them to have it available. But this small a
 consistent trustworthy price spotters then this simple app can serve greater purpose.
 
 You can access the live fuel price page here > https://rcwebpw.github.io/livefuelpricesph/
+
+The ones in the green box has the cheapest price, can you spot them? take time to Zoom In/Zoom Out for closer details on prices
+
+Fuel Stations update their prices once a week every Tuesday (some update on Friday if there is incoming lower price)
