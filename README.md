@@ -8,3 +8,4 @@ You can access the live fuel price page here > https://rcwebpw.github.io/livefue
 The ones in the green box has the cheapest price, can you spot them? take time to Zoom In/Zoom Out for closer details on prices
 
 Fuel Stations update their prices once a week every Tuesday (some update on Friday if there is incoming lower price)
+
