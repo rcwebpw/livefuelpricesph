@@ -1,0 +1,106 @@
+[
+  {
+    "id": 1782835467498,
+    "stationName": "Seaoil Zabarte",
+    "lat": 14.748837192505928,
+    "lng": 121.04493832345723,
+    "prices": {
+      "unleaded": 69.35,
+      "premium": 70.35,
+      "xcs": 0,
+      "diesel": 63
+    },
+    "updatedAt": "07/01 00:04"
+  },
+  {
+    "id": 1782835529250,
+    "stationName": "Jade Blue Fuel Zabarte",
+    "lat": 14.737225853812786,
+    "lng": 121.04786083352941,
+    "prices": {
+      "unleaded": 0,
+      "premium": 67.9,
+      "xcs": 0,
+      "diesel": 61.8
+    },
+    "updatedAt": "07/01 00:05"
+  },
+  {
+    "id": 1782835620338,
+    "stationName": "Uno Fuel Zabarte",
+    "lat": 14.735828910579745,
+    "lng": 121.04796066984945,
+    "prices": {
+      "unleaded": 68.9,
+      "premium": 69.9,
+      "xcs": 0,
+      "diesel": 62.95
+    },
+    "updatedAt": "07/01 00:07"
+  },
+  {
+    "id": 1782835841882,
+    "stationName": "Unioil Zabarte",
+    "lat": 14.733240732092087,
+    "lng": 121.0484960904887,
+    "prices": {
+      "unleaded": 71.8,
+      "premium": 74.8,
+      "xcs": 79.8,
+      "diesel": 70.1
+    },
+    "updatedAt": "07/01 00:12"
+  },
+  {
+    "id": 1782836057842,
+    "stationName": "Astro Fuel",
+    "lat": 14.723031120051616,
+    "lng": 121.05043509675765,
+    "prices": {
+      "unleaded": 68.55,
+      "premium": 0,
+      "xcs": 0,
+      "diesel": 66.7
+    },
+    "updatedAt": "07/01 00:15"
+  },
+  {
+    "id": 1782836208171,
+    "stationName": "CleanFuel ",
+    "lat": 14.721316055194087,
+    "lng": 121.0517651863661,
+    "prices": {
+      "unleaded": 72.4,
+      "premium": 72.9,
+      "xcs": 0,
+      "diesel": 65.8
+    },
+    "updatedAt": "07/01 00:16"
+  },
+  {
+    "id": 1782836304826,
+    "stationName": "Jetti Brittany",
+    "lat": 14.72447301825873,
+    "lng": 121.05519876148006,
+    "prices": {
+      "unleaded": 0,
+      "premium": 66.6,
+      "xcs": 69.1,
+      "diesel": 66.7
+    },
+    "updatedAt": "07/01 00:18"
+  },
+  {
+    "id": 1782836374995,
+    "stationName": "Petro Gazz",
+    "lat": 14.722553277369107,
+    "lng": 121.0531105765559,
+    "prices": {
+      "unleaded": 70.75,
+      "premium": 71.75,
+      "xcs": 0,
+      "diesel": 63.3
+    },
+    "updatedAt": "07/01 00:19"
+  }
+]
