@@ -10,7 +10,7 @@
       "xcs": 0,
       "diesel": 63
     },
-    "updatedAt": "07/01 00:04"
+    "updatedAt": "07/01 01:05"
   },
   {
     "id": 1782835529250,
@@ -102,5 +102,70 @@
       "diesel": 63.3
     },
     "updatedAt": "07/01 00:19"
+  },
+  {
+    "id": 1782881010880,
+    "stationName": "Shell Zabarte",
+    "lat": 14.753188615760637,
+    "lng": 121.04426565259291,
+    "prices": {
+      "unleaded": 73.5,
+      "premium": 83.2,
+      "xcs": 0,
+      "diesel": 70.3
+    },
+    "updatedAt": "07/01 12:43"
+  },
+  {
+    "id": 1782881095967,
+    "stationName": "Petron Zabarte",
+    "lat": 14.754922466799828,
+    "lng": 121.04366943018911,
+    "prices": {
+      "unleaded": 0,
+      "premium": 70.9,
+      "xcs": 71.9,
+      "diesel": 69.8
+    },
+    "updatedAt": "07/01 12:44"
+  },
+  {
+    "id": 1782881232711,
+    "stationName": "Flying V Old Zabarte Rd",
+    "lat": 14.76066045729673,
+    "lng": 121.04387434537503,
+    "prices": {
+      "unleaded": 69.35,
+      "premium": 70.35,
+      "xcs": 0,
+      "diesel": 63.96
+    },
+    "updatedAt": "07/01 12:47"
+  },
+  {
+    "id": 1782881327887,
+    "stationName": "Uno Fuel Samano",
+    "lat": 14.761495727249176,
+    "lng": 121.04467567278812,
+    "prices": {
+      "unleaded": 70.4,
+      "premium": 71.4,
+      "xcs": 0,
+      "diesel": 65.1
+    },
+    "updatedAt": "07/01 12:48"
+  },
+  {
+    "id": 1782881421311,
+    "stationName": "PTT Gas Station",
+    "lat": 14.756957170168874,
+    "lng": 121.05372868296435,
+    "prices": {
+      "unleaded": 73.7,
+      "premium": 74.7,
+      "xcs": 0,
+      "diesel": 74.9
+    },
+    "updatedAt": "07/01 12:50"
   }
 ]
